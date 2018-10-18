@@ -46,7 +46,10 @@ func (c Cartesian) ToPolar() Polar {
 	}
 }
 
-
+func DistanceBetweenPolars(a, b Polar) float64 {
+	// https://math.tutorvista.com/geometry/distance-formula-for-polar-coordinates.html
+	return math.Sqrt( math.Pow(a.r, 2) + math.Pow(b.r, 2) - 2 * a.r * b.r * math.Cos(a.t - b.t) )
+}
 
 func RoundFloatToInt(f float64) int {
 	return int(math.Round(f))
