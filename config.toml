@@ -1,0 +1,32 @@
+# General design
+#seed = 1696298614598191000
+
+canvas_size = 1600
+
+external_node_distance = 750 # this must be less than half of the canvas size
+
+primary_nodes_alignment_min_offset_degrees = 15 # +- degrees to offset against the vertical axis (270º)
+primary_nodes_alignment_max_offset_degrees = 25 # +- degrees to offset against the vertical axis (270º)
+
+inner_ring_min_radius = 75 # the center primary nodes will be at least DOUBLE this distance
+inner_ring_max_radius = 100 # the center primary nodes will be at most DOUBLE this distance
+
+outer_ring_min_radius = 150
+outer_ring_max_radius = 450
+
+min_number_of_secondary_nodes = 6
+max_number_of_secondary_nodes = 9
+min_distance_between_nodes = 150
+
+min_number_of_links = 12 # this includes the initial *2* links created as base
+max_number_of_links = 16
+max_links_per_node = 3
+
+# Drawing
+primary_link_stroke_width = 9.0
+secondary_link_stroke_width = 6.5 # in the original it was double the regular
+
+primary_node_radius = 20.0 # primary node are filled in
+
+secondary_node_radius = 20.0 # secondary nodes have the same stroke_width, the outher radius is defined here
+secondary_node_stroke_width = 6.5

@@ -1,7 +1,8 @@
-package main
+package internal
 
 import (
 	"math"
+	"math/rand"
 )
 
 type Polar struct {
@@ -23,8 +24,6 @@ func (p Polar) ToCartesian() Cartesian {
 		y: p.Y(),
 	}
 }
-
-
 
 type Cartesian struct {
 	x float64
@@ -48,7 +47,7 @@ func (c Cartesian) ToPolar() Polar {
 
 func DistanceBetweenPolars(a, b Polar) float64 {
 	// https://math.tutorvista.com/geometry/distance-formula-for-polar-coordinates.html
-	return math.Sqrt( math.Pow(a.r, 2) + math.Pow(b.r, 2) - 2 * a.r * b.r * math.Cos(a.t - b.t) )
+	return math.Sqrt(math.Pow(a.r, 2) + math.Pow(b.r, 2) - 2*a.r*b.r*math.Cos(a.t-b.t))
 }
 
 func RoundFloatToInt(f float64) int {
@@ -61,4 +60,17 @@ func RadianToDegree(rad float64) float64 {
 
 func DegreeToRadian(deg float64) float64 {
 	return deg * math.Pi / 180.0
+}
+
+func RandomRadianInOctant(octant int) float64 {
+	// one octant (1/8 of a circle) = π/4
+
+	// calculate current octant
+	o := octant % 8
+
+	// randomize position inside an octant
+	r := rand.Float64() * (math.Pi / 4.0)
+
+	// add both of them together
+	return r + (float64(o) * (math.Pi / 4.0))
 }
