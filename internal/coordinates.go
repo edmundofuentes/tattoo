@@ -69,8 +69,24 @@ func RandomRadianInOctant(octant int) float64 {
 	o := octant % 8
 
 	// randomize position inside an octant
-	r := rand.Float64() * (math.Pi / 4.0)
+	//r := rand.Float64()*(math.Pi/4.0) // does not cross the vertical line
+	r := rand.Float64()*(math.Pi/4.0) - (math.Pi / 2.0) // centered around the vertical line
 
 	// add both of them together
 	return r + (float64(o) * (math.Pi / 4.0))
+}
+
+func RandomRadianInSector(sector int, numberOfSectors int) float64 {
+	// one octant (1/8 of a circle) = π/4
+	radiansPerSector := (2.0 * math.Pi) / float64(numberOfSectors)
+
+	// calculate current sector
+	s := sector % numberOfSectors // this loops around as the sector continues increasing
+
+	// randomize position within the sector
+	// however, we are only wiggling between 50% of the sector's centerline
+	r := ((rand.Float64() * 0.5) - 0.5) * radiansPerSector // centered around the vertical line
+
+	// add both of them together
+	return r + (float64(s) * radiansPerSector) - (math.Pi / 2) // remove Pi/2 to shift sectors by 90 degrees
 }

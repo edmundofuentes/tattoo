@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/edmundofuentes/tattoo/internal"
@@ -33,11 +34,30 @@ func main() {
 		seed = time.Now().UTC().UnixNano()
 	}
 
+	// Initialize folders
+	os.MkdirAll("./output", os.ModePerm)
+	os.MkdirAll("./output/img", os.ModePerm)
+	os.MkdirAll("./output/json", os.ModePerm)
+
+	// STEP 1: Generate the design
 	rand.Seed(seed)
 	fmt.Printf("Attempting design from seed %d ..\n", seed)
 
-	// STEP 1: Generate the design
 	constellation := internal.Generate(cfg)
+
+	// write the constellation json
+	b, err := json.Marshal(constellation)
+	if err != nil {
+		fmt.Printf("Error marshalling constellation to JSON: %v\n", err)
+		return
+	}
+
+	jsonFilename := fmt.Sprintf("./output/json/%d.json", seed)
+	err = os.WriteFile(jsonFilename, b, os.ModePerm)
+
+	if err != nil {
+		fmt.Println("Error writing output JSON file. Check permissions and try again.")
+	}
 
 	// debug the constellation
 	//fmt.Printf("%V\n", constellation)
@@ -45,10 +65,9 @@ func main() {
 	// STEP 2: Draw it
 	image := internal.Draw(cfg, constellation)
 
-	os.MkdirAll("./output", os.ModePerm)
-	filename := fmt.Sprintf("./output/%d.png", seed)
-
-	err = image.SavePNG(filename)
+	// write the image
+	imageFilename := fmt.Sprintf("./output/img/%d.png", seed)
+	err = image.SavePNG(imageFilename)
 
 	if err != nil {
 		fmt.Println("Error writing output PNG file. Check permissions and try again.")

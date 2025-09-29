@@ -13,14 +13,14 @@ func Draw(cfg Config, constellation *Constellation) *gg.Context {
 	dc.Fill()
 
 	// DRAW THE LINKS
-	// Links are drawn first because some nodes have no fill, so we want to make sure that the node's
+	// Links are drawn first because some Nodes have no fill, so we want to make sure that the node's
 	// circles are drawn AFTER the link's lines have been drawn
-	for _, link := range constellation.links {
+	for _, link := range constellation.Links {
 		drawLink(cfg, dc, link)
 	}
 
 	// Draw the Nodes
-	for _, node := range constellation.nodes {
+	for _, node := range constellation.Nodes {
 		drawNode(cfg, dc, node)
 	}
 
@@ -29,10 +29,10 @@ func Draw(cfg Config, constellation *Constellation) *gg.Context {
 
 func drawLink(cfg Config, dc *gg.Context, link Link) {
 	HC := cfg.HalfCanvas()
-	dc.DrawLine(link.nodeA.polar.X()+HC, link.nodeA.polar.Y()+HC, link.nodeB.polar.X()+HC, link.nodeB.polar.Y()+HC)
+	dc.DrawLine(link.NodeA.Polar.X()+HC, link.NodeA.Polar.Y()+HC, link.NodeB.Polar.X()+HC, link.NodeB.Polar.Y()+HC)
 	dc.SetRGB(0, 0, 0)
 
-	if link.linkType == LinkType_PRIMARY {
+	if link.LinkType == LinkType_PRIMARY {
 		dc.SetLineWidth(cfg.PrimaryLinkStrokeWidth)
 	} else {
 		dc.SetLineWidth(cfg.SecondaryLinkStrokeWidth)
@@ -42,18 +42,18 @@ func drawLink(cfg Config, dc *gg.Context, link Link) {
 }
 
 func drawNode(cfg Config, dc *gg.Context, node Node) {
-	if node.nodeType == NodeType_PRIMARY || node.nodeType == NodeType_EXTERNAL {
+	if node.NodeType == NodeType_PRIMARY || node.NodeType == NodeType_EXTERNAL {
 		// Primary Nodes are solid filled
-		dc.DrawCircle(node.polar.X()+cfg.HalfCanvas(), node.polar.Y()+cfg.HalfCanvas(), cfg.PrimaryNodeRadius)
+		dc.DrawCircle(node.Polar.X()+cfg.HalfCanvas(), node.Polar.Y()+cfg.HalfCanvas(), cfg.PrimaryNodeRadius)
 		dc.SetRGB(0, 0, 0)
 		dc.Fill()
 	} else {
 		// Secondary Nodes have a stroke and are empty inside
-		dc.DrawCircle(node.polar.X()+cfg.HalfCanvas(), node.polar.Y()+cfg.HalfCanvas(), cfg.SecondaryNodeRadius)
+		dc.DrawCircle(node.Polar.X()+cfg.HalfCanvas(), node.Polar.Y()+cfg.HalfCanvas(), cfg.SecondaryNodeRadius)
 		dc.SetRGB(0, 0, 0)
 		dc.Fill()
 
-		dc.DrawCircle(node.polar.X()+cfg.HalfCanvas(), node.polar.Y()+cfg.HalfCanvas(), cfg.SecondaryNodeRadius-cfg.SecondaryNodeStrokeWidth)
+		dc.DrawCircle(node.Polar.X()+cfg.HalfCanvas(), node.Polar.Y()+cfg.HalfCanvas(), cfg.SecondaryNodeRadius-cfg.SecondaryNodeStrokeWidth)
 		dc.SetRGB(1, 1, 1)
 		dc.Fill()
 	}

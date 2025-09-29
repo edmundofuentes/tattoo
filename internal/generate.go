@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -18,73 +17,99 @@ func Generate(cfg Config) *Constellation {
 
 	constellation := NewConstellation()
 
-	// we will calculate 3 special "nodes" that we will call "Primary"
+	// we will calculate 4 special "Nodes" that we will call "Primary"
 	// the very first node will be outside the bounds of the connections circle
 	externalNode := Node{
-		polar: Polar{
+		Polar: Polar{
 			t: DegreeToRadian(270),
-			r: float64(cfg.ExternalNodeDistance), // this will always be perfectly at North
+			r: float64(cfg.PrimaryExternalNodeDistance), // this will always be perfectly at North
 		},
-		nodeType: NodeType_EXTERNAL,
+		NodeType: NodeType_EXTERNAL,
 	}
 	constellation.appendNode(externalNode)
 
-	// then we will randomly place a "pair" within the INNER ring
-	// calculate the alignment offset
-	theta := (rand.Float64() * float64(cfg.PrimaryNodesAlignmentMaxOffsetDegrees-cfg.PrimaryNodesAlignmentMinOffsetDegrees)) + float64(cfg.PrimaryNodesAlignmentMinOffsetDegrees)
-	theta = 270 - theta
-
+	// then we will place 3 within the INNER ring
 	internalNodeA := Node{
-		polar: Polar{
-			//t: RandomRadianInOctant(7),
-			t: DegreeToRadian(theta),
-			r: float64(rand.Intn(cfg.InnerRingMaxRadius-cfg.InnerRingMinRadius) + cfg.InnerRingMinRadius),
+		Polar: Polar{
+			t: DegreeToRadian(270),
+			r: float64(cfg.PrimaryInternalNodesDistance),
 		},
-		nodeType: NodeType_PRIMARY,
+		NodeType: NodeType_PRIMARY,
 	}
 
-	// The second node should be opposite to the first one
+	// The second and third Nodes are at equidistant angles
 	internalNodeB := internalNodeA
-	internalNodeB.polar.t += math.Pi
+	internalNodeB.Polar.t += DegreeToRadian(120)
+
+	internalNodeC := internalNodeA
+	internalNodeC.Polar.t += DegreeToRadian(-120)
 
 	constellation.appendNode(internalNodeA)
 	constellation.appendNode(internalNodeB)
+	constellation.appendNode(internalNodeC)
 
-	// Finally, link all the primary nodes
+	// Finally, link all the primary Nodes
 	constellation.appendLink(Link{
-		nodeA:    externalNode,
-		nodeB:    internalNodeA,
-		linkType: LinkType_PRIMARY,
+		NodeA:    externalNode,
+		NodeB:    internalNodeA,
+		LinkType: LinkType_PRIMARY,
 	})
 
 	constellation.appendLink(Link{
-		nodeA:    internalNodeA,
-		nodeB:    internalNodeB,
-		linkType: LinkType_PRIMARY,
+		NodeA:    internalNodeA,
+		NodeB:    internalNodeB,
+		LinkType: LinkType_PRIMARY,
 	})
 
-	fmt.Println("> Generated primary nodes!")
+	constellation.appendLink(Link{
+		NodeA:    internalNodeA,
+		NodeB:    internalNodeC,
+		LinkType: LinkType_PRIMARY,
+	})
 
-	// Generate all the other Secondary nodes
-	// determine how many nodes we will actually place
+	fmt.Println("> Generated primary Nodes!")
+
+	// Place secondary nodes
+	constellation = placeSecondaryNodes(cfg, constellation)
+
+	// Place the links
+	//constellation = placeLinksByNearest(cfg, constellation)
+	constellation = placeLinksAll(cfg, constellation)
+
+	return constellation
+}
+
+func placeSecondaryNodes(cfg Config, constellation *Constellation) *Constellation {
+	// Generate all the other Secondary Nodes
+	// determine how many Nodes we will actually place
 	numberOfSecondaryNodes := rand.Intn(cfg.MaxNumberOfSecondaryNodes-cfg.MinNumberOfSecondaryNodes+1) + cfg.MinNumberOfSecondaryNodes
-	fmt.Printf("> Attempting to place %d secondary nodes\n", numberOfSecondaryNodes)
-	quadrant := 0
+	fmt.Printf("> Attempting to place %d secondary Nodes\n", numberOfSecondaryNodes)
+	sector := 0
 
 	for {
-		quadrant++
+		sector++
+
+		// skip the vertical sector, ensure the external node is not blocked by a secondary node
+		if (sector % cfg.NumberOfSectorsForSecondaryNodes) == 0 {
+			continue
+		}
+
+		// maybe we also skip this sector? 10% chance
+		if rand.Float64() < 0.10 {
+			continue
+		}
 
 		node := Node{
-			polar: Polar{
-				t: RandomRadianInOctant(quadrant),
-				r: float64(rand.Intn(cfg.OuterRingMaxRadius-cfg.OuterRingMinRadius) + cfg.OuterRingMinRadius),
+			Polar: Polar{
+				t: RandomRadianInSector(sector, cfg.NumberOfSectorsForSecondaryNodes),
+				r: float64(rand.Intn(cfg.SecondaryNodesMaxRadius-cfg.SecondaryNodesMinRadius) + cfg.SecondaryNodesMinRadius),
 			},
-			nodeType: NodeType_SECONDARY,
+			NodeType: NodeType_SECONDARY,
 		}
 
 		tooClose := false
-		for _, c := range constellation.nodes {
-			if DistanceBetweenPolars(node.polar, c.polar) < cfg.MinDistanceBetweenNodes {
+		for _, c := range constellation.Nodes {
+			if DistanceBetweenPolars(node.Polar, c.Polar) < cfg.MinDistanceBetweenNodes {
 				tooClose = true
 				break
 			}
@@ -96,196 +121,61 @@ func Generate(cfg Config) *Constellation {
 
 		constellation.appendNode(node)
 
-		fmt.Printf("· Placed secondary node! Total: %d\n", len(constellation.nodes)-3)
+		//fmt.Printf("· Placed secondary node! Total: %d\n", len(constellation.Nodes)-4)
 
-		if len(constellation.nodes)-3 >= numberOfSecondaryNodes {
+		if len(constellation.Nodes)-4 >= numberOfSecondaryNodes {
 			break
 		}
 	}
 
-	// Finally, place the links
-	//constellation = placeLinksRandomly(cfg, constellation)
-	constellation = placeLinksByNearest(cfg, constellation)
-
-	/*
-
-
-		ConnectPrincipalLoop:
-			for {
-				// Select a minor circles at random
-				m := rand.Intn(len(minors))
-
-				// skip if the distance between them is bigger than 4 octants (4 * π/4)
-				if math.Abs(math.Mod(principal.t, 2*math.Pi)-math.Mod(minors[m].t, 2*math.Pi)) > (math.Pi) {
-					continue
-				}
-
-				// check if the connection is repeated
-				for _, c := range principalConnections {
-					if c == m {
-						continue ConnectPrincipalLoop
-					}
-				}
-
-				// check that the distance between the principal and the minor is not too big
-				if DistanceBetweenPolars(principal, minors[m]) > MAX_DISTANCE_FOR_MAJOR_CONNECTION {
-					continue
-				}
-
-				// create a connection
-				principalConnections = append(principalConnections, m)
-
-				// end the loop once we have reached the minimum number of connections
-				if len(principalConnections) == N_PRINCIPAL_CONNECTIONS {
-					break
-				}
-			}
-
-			secondaryConnections := make([]int, 0)
-
-		ConnectSecondaryLoop:
-			for {
-				// Select a minor circles at random
-				m := rand.Intn(len(minors))
-
-				// skip if the distance between them is bigger than 4 octants (4 * π/4)
-				if math.Abs(math.Mod(secondary.t, 2*math.Pi)-math.Mod(minors[m].t, 2*math.Pi)) > (math.Pi) {
-					continue
-				}
-
-				// check if the connection is repeated
-				for _, c := range secondaryConnections {
-					if c == m {
-						continue ConnectSecondaryLoop
-					}
-				}
-
-				// check that the distance between the secondary and the minor is not too big
-				if DistanceBetweenPolars(secondary, minors[m]) > MAX_DISTANCE_FOR_MAJOR_CONNECTION {
-					continue
-				}
-
-				// create a connection
-				secondaryConnections = append(secondaryConnections, m)
-
-				// end the loop once we have reached the minimum number of connections
-				if len(secondaryConnections) == N_SECONDARY_CONNECTIONS {
-					break
-				}
-			}
-
-			// Randomize the connection between the minors
-			connections := make([]Connection, 0)
-
-		ConnectMinorCirclesLoop:
-			for {
-
-				// Select to minor circles at random
-				a := rand.Intn(len(minors))
-				b := rand.Intn(len(minors))
-
-				// if they are the same, skip
-				if a == b {
-					continue
-				}
-
-				// skip if the distance between them is bigger than 2 octants (2 * π/4)
-				if math.Abs(math.Mod(minors[a].t, 2*math.Pi)-math.Mod(minors[b].t, 2*math.Pi)) > (2 * math.Pi / 4) {
-					continue
-				}
-
-				// check if the connection is repeated
-				for _, c := range connections {
-					if (c.a == a && c.b == b) || (c.a == b && c.b == a) {
-						continue ConnectMinorCirclesLoop
-					}
-				}
-
-				// check how many times each node has a connection
-				totalA := 0
-				totalB := 0
-				for _, c := range connections {
-					if c.a == a || c.b == a {
-						totalA++
-					}
-					if c.a == b || c.b == b {
-						totalB++
-					}
-				}
-
-				if totalA >= N_MAX_CONNECTIONS_PER_MINOR || totalB >= N_MAX_CONNECTIONS_PER_MINOR {
-					continue
-				}
-
-				// create a connection
-				connections = append(connections, Connection{a, b})
-
-				// end the loop once we have reached the minimum number of connections
-				if len(connections) >= MINIMUM_MINOR_CONNECTIONS && checkThatAllPointsHaveAtLeastOneConnection(N_MINOR_CIRCLES, connections) {
-					break
-				}
-			}
-
-	*/
+	fmt.Printf("· Placed secondary Nodes! Total: %d\n", len(constellation.Nodes)-4)
 
 	return constellation
 }
 
-func placeLinksRandomly(cfg Config, constellation *Constellation) *Constellation {
-	numberOfLinks := rand.Intn(cfg.MaxNumberOfLinks-cfg.MinNumberOfLinks+1) + cfg.MinNumberOfLinks
-	numberOfLinks = numberOfLinks - 2 // remove the initial two links that have already been placed
+func placeLinksAll(cfg Config, constellation *Constellation) *Constellation {
 
-	for {
-		// Select two random nodes
-		// node A will be prioritized from a list of nodes that do not YET have a link
-		nodesWithoutLinks := constellation.nodesWithoutLinks()
-		var nodeA Node
-		if len(nodesWithoutLinks) != 0 {
-			nodeA = nodesWithoutLinks[rand.Intn(len(nodesWithoutLinks))]
-		} else {
-			// all nodes have at least one link, yes! we can use the default random method
-			nodeA = constellation.nodes[rand.Intn(len(constellation.nodes))]
-		}
-
-		nodeB := constellation.nodes[rand.Intn(len(constellation.nodes))]
-
-		if nodeA == nodeB {
-			// same node, continue
-			continue
-		}
-
-		if nodeA.nodeType == NodeType_EXTERNAL || nodeB.nodeType == NodeType_EXTERNAL {
+	for _, nodeA := range constellation.Nodes {
+		if nodeA.NodeType == NodeType_EXTERNAL {
 			// the original external node cannot have more than one link
 			continue
 		}
 
-		// Look up how many links a node has
-		if constellation.countLinksForNode(nodeA) > cfg.MaxLinksPerNode {
-			continue
-		}
+		for _, nodeB := range constellation.Nodes {
+			if nodeA == nodeB {
+				// same node, continue
+				continue
+			}
 
-		if constellation.countLinksForNode(nodeB) > cfg.MaxLinksPerNode {
-			continue
-		}
+			if nodeB.NodeType == NodeType_EXTERNAL {
+				// the original external node cannot have more than one link
+				continue
+			}
 
-		// So far so good, prepare the link
-		link := Link{
-			nodeA:    nodeA,
-			nodeB:    nodeB,
-			linkType: LinkType_SECONDARY,
-		}
+			if nodeA.NodeType == NodeType_PRIMARY && nodeB.NodeType == NodeType_PRIMARY {
+				// prevent linking the inner Primary nodes
+				continue
+			}
 
-		// do one final check to see if the link is not repeated
-		if constellation.similarLinkExists(link) {
-			continue
-		}
+			// So far so good, prepare the link
+			link := Link{
+				NodeA:    nodeA,
+				NodeB:    nodeB,
+				LinkType: LinkType_SECONDARY,
+			}
 
-		constellation.appendLink(link)
+			// check to see if the link is not repeated
+			if constellation.similarLinkExists(link) {
+				continue
+			}
 
-		fmt.Printf("· Placed link! Total: %d\n", len(constellation.links)-2)
+			// check that this link doesn't intersect any other link
+			// we checked if the same link exists above, so that prevents a collinearity exception to the check
+			if constellation.linkIntersectsExisting(link) {
+				continue
+			}
 
-		if len(constellation.links)-2 >= numberOfLinks {
-			break
+			constellation.appendLink(link)
 		}
 	}
 
@@ -294,31 +184,34 @@ func placeLinksRandomly(cfg Config, constellation *Constellation) *Constellation
 
 func placeLinksByNearest(cfg Config, constellation *Constellation) *Constellation {
 	numberOfLinks := rand.Intn(cfg.MaxNumberOfLinks-cfg.MinNumberOfLinks+1) + cfg.MinNumberOfLinks
-	numberOfLinks = numberOfLinks - 2 // remove the initial two links that have already been placed
+	numberOfLinks = numberOfLinks - 3 // remove the initial three Links that have already been placed
+
+	fmt.Printf("> Attempting to place %d secondary Links\n", numberOfLinks)
 
 	for {
-		// Select two random nodes
-		// node A will be prioritized from a list of nodes that do not YET have a link
-		nodesWithoutLinks := constellation.nodesWithoutLinks()
+		// Select two random Nodes
+		// node A will be prioritized from a list of Nodes that do not YET have a link
+		nodesWithoutLinks := constellation.nodesWithLessThanXLinks(cfg.MinLinksPerNode) // TODO: make this configurable
 		var nodeA Node
 		if len(nodesWithoutLinks) != 0 {
 			nodeA = nodesWithoutLinks[rand.Intn(len(nodesWithoutLinks))]
 		} else {
-			// all nodes have at least one link, yes! we can use the default random method
-			nodeA = constellation.nodes[rand.Intn(len(constellation.nodes))]
+			// all Nodes have at least X links, yes! we can use the default random method
+			nodeA = constellation.Nodes[rand.Intn(len(constellation.Nodes))]
 		}
 
-		// Perform checks on NodeA first
-		if nodeA.nodeType == NodeType_EXTERNAL {
+		if nodeA.NodeType == NodeType_EXTERNAL {
 			continue
 		}
 
-		if constellation.countLinksForNode(nodeA) > cfg.MaxLinksPerNode {
+		fmt.Printf("· Selected node %f %f %d\n", nodeA.Polar.t, nodeA.Polar.r, constellation.countLinksForNode(nodeA))
+
+		if constellation.countLinksForNode(nodeA) >= cfg.MaxLinksPerNode {
 			continue
 		}
 
-		// then, we will order the nodes by nearest neighbor from the source node
-		nodesOrderedByDistanceToNode := constellation.nodesOrderedByDistanceFromPolar(nodeA.polar)
+		// then, we will order the Nodes by nearest neighbor from the source node
+		nodesOrderedByDistanceToNode := constellation.nodesOrderedByDistanceFromPolar(nodeA.Polar)
 
 		// and we will try to link it
 		for _, nodeB := range nodesOrderedByDistanceToNode {
@@ -327,39 +220,52 @@ func placeLinksByNearest(cfg Config, constellation *Constellation) *Constellatio
 				continue
 			}
 
-			if nodeB.nodeType == NodeType_EXTERNAL {
+			if nodeB.NodeType == NodeType_EXTERNAL {
 				// the original external node cannot have more than one link
 				continue
 			}
 
-			// Look up how many links a node has
-			if constellation.countLinksForNode(nodeB) > cfg.MaxLinksPerNode {
+			if nodeA.NodeType == NodeType_PRIMARY && nodeB.NodeType == NodeType_PRIMARY {
+				// prevent linking the inner Primary nodes
+				continue
+			}
+
+			// Look up how many Links the other node has
+			if constellation.countLinksForNode(nodeB) >= cfg.MaxLinksPerNode {
 				continue
 			}
 
 			// So far so good, prepare the link
 			link := Link{
-				nodeA:    nodeA,
-				nodeB:    nodeB,
-				linkType: LinkType_SECONDARY,
+				NodeA:    nodeA,
+				NodeB:    nodeB,
+				LinkType: LinkType_SECONDARY,
 			}
 
-			// do one final check to see if the link is not repeated
+			// check to see if the link is not repeated
 			if constellation.similarLinkExists(link) {
+				continue
+			}
+
+			// check that this link doesn't intersect any other link
+			// we checked if the same link exists above, so that prevents a collinearity exception to the check
+			if constellation.linkIntersectsExisting(link) {
 				continue
 			}
 
 			constellation.appendLink(link)
 
-			fmt.Printf("· Placed link! Total: %d\n", len(constellation.links)-2)
+			//fmt.Printf("· Placed link! Total: %d\n", len(constellation.Links)-3)
 
 			break
 		}
 
-		if len(constellation.links)-2 >= numberOfLinks {
+		if len(constellation.Links)-3 >= numberOfLinks {
 			break
 		}
 	}
+
+	fmt.Printf("· Placed secondary Links! Total: %d\n", len(constellation.Links)-3)
 
 	return constellation
 }

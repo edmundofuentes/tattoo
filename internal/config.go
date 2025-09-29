@@ -5,23 +5,20 @@ type Config struct {
 
 	CanvasSize int `toml:"canvas_size"`
 
-	ExternalNodeDistance int `toml:"external_node_distance"`
+	PrimaryExternalNodeDistance  int `toml:"primary_external_node_distance"`
+	PrimaryInternalNodesDistance int `toml:"primary_internal_nodes_distance"`
 
-	PrimaryNodesAlignmentMinOffsetDegrees int `toml:"primary_nodes_alignment_min_offset_degrees"`
-	PrimaryNodesAlignmentMaxOffsetDegrees int `toml:"primary_nodes_alignment_max_offset_degrees"`
+	SecondaryNodesMinRadius int `toml:"secondary_nodes_min_radius"`
+	SecondaryNodesMaxRadius int `toml:"secondary_nodes_max_radius"`
 
-	InnerRingMinRadius int `toml:"inner_ring_min_radius"`
-	InnerRingMaxRadius int `toml:"inner_ring_max_radius"`
-
-	OuterRingMinRadius int `toml:"outer_ring_min_radius"`
-	OuterRingMaxRadius int `toml:"outer_ring_max_radius"`
-
-	MinNumberOfSecondaryNodes int     `toml:"min_number_of_secondary_nodes"`
-	MaxNumberOfSecondaryNodes int     `toml:"max_number_of_secondary_nodes"`
-	MinDistanceBetweenNodes   float64 `toml:"min_distance_between_nodes"`
+	MinNumberOfSecondaryNodes        int     `toml:"min_number_of_secondary_nodes"`
+	MaxNumberOfSecondaryNodes        int     `toml:"max_number_of_secondary_nodes"`
+	MinDistanceBetweenNodes          float64 `toml:"min_distance_between_nodes"`
+	NumberOfSectorsForSecondaryNodes int     `toml:"number_of_sectors_for_secondary_nodes"`
 
 	MinNumberOfLinks int `toml:"min_number_of_links"`
 	MaxNumberOfLinks int `toml:"max_number_of_links"`
+	MinLinksPerNode  int `toml:"min_links_per_node"`
 	MaxLinksPerNode  int `toml:"max_links_per_node"`
 
 	PrimaryLinkStrokeWidth   float64 `toml:"primary_link_stroke_width"`
